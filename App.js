@@ -1,20 +1,35 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import Home from './src/screens/Home';
+import PokemonList from './src/screens/PokemonList';
+import PokemonDetails from './src/screens/PokemonDetails';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+    return (
+        <NavigationContainer>
+            <Stack.Navigator>
+                <Stack.Screen
+                    name="Home"
+                    component={Home}
+                    options={{ title: 'PokéDex' }}
+                />
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+                <Stack.Screen
+                    name="PokemonList"
+                    component={PokemonList}
+                    options={{ title: 'Pokémons' }}
+                />
+
+                <Stack.Screen
+                    name="PokemonDetails"
+                    component={PokemonDetails}
+                    options={{ title: 'Detalhes' }}
+                />
+            </Stack.Navigator>
+        </NavigationContainer>
+    );
+}
