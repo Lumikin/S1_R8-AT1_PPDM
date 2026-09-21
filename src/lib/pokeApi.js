@@ -6,12 +6,12 @@ const API_POKEMON = axios.create({
   timeout: 5000, //5 Segundos
 });
 
-async function ListarPokemons() {
+export async function ListarPokemons() {
   const result = await API_POKEMON.get("/pokemon?limit=100000&offset=0"); // limit: Para listar TODOS os pokemons sem limite da API
   return result;
 }
 
-async function ListarDadosPokemon(pokemon) {
+export async function ListarDadosPokemon(pokemon) {
   try {
     const api = await API_POKEMON.get(`/pokemon/${pokemon}`);
 
@@ -20,11 +20,19 @@ async function ListarDadosPokemon(pokemon) {
       nome: api.data.name,
       altura: api.data.height / 10, // Transformar em metros
       peso: api.data.weight / 10, // Transformar em KG
+      abilidades: api.data.abilities.map(a => a.ability.name),
       movimentos: api.data.moves.map(m => m.move.name), // Mostra todos os movimentos em uma array
       imgMale: api.data.sprites.front_default,
       imgMaleS: api.data.sprites.front_shiny,
       imgFemale: api.data.sprites.front_female,
       imgFemaleS: api.data.sprites.front_shiny_female,
+      tipo: api.data.types.map(t => t.type.name), // Mostra todos os tipos em array
+      status: api.data.stats.map(s => ({
+        //Filtra por status
+        status: s.stat.name,
+        valor: s.base_stat,
+      })),
+      som: api.data.cries.latest,
     };
 
     return dataPokemon;
@@ -35,17 +43,4 @@ async function ListarDadosPokemon(pokemon) {
     console.error(error);
     return [];
   }
-}
-const meuPokemon = await ListarDadosPokemon("zeraora");
-if (!meuPokemon) {
-  console.log("Não encontrado");
-} else {
-  console.log(meuPokemon.id);
-  console.log(`${meuPokemon.peso} KG`);
-  console.log(`${meuPokemon.altura} Metros`);
-  console.log(meuPokemon.movimentos);
-  console.log(`${meuPokemon.imgMale} Normal `);
-  console.log(`${meuPokemon.imgMaleS} Shiny `);
-  console.log(`${meuPokemon.imgFemale} Female`);
-  console.log(`${meuPokemon.imgFemaleS} Female Shiny`);
 }
