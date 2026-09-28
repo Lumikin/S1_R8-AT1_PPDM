@@ -1,24 +1,25 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-} from "react-native";
+    StyleSheet,
+    Text,
+    View,
+    TextInput,
+    TouchableOpacity,
+    FlatList
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { ListarPokemons, ListarDadosPokemon } from "../services/pokeApi.js";
 
-import TipoPokemon from "./TipoPokemon";
-import { Image } from "expo-image";
+import {
+    listarFavoritos,
+    alternarFavorito
+} from '../lib/favoritosDb';
+
+import CardPokemon from './CardPokemon.js';
 
 const POR_PAGINA = 20;
 
-// Tempo de espera após digitar para recarregar os tipos dos resultados
-const ESPERA_BUSCA = 300;
-
-// Pega o número do pokémon a partir da url (".../pokemon/25/" -> "25")
 function pegarId(url) {
   return url.split("/").filter(Boolean).pop();
 }
@@ -36,23 +37,66 @@ function corresponde(item, termo) {
 }
 
 export default function PokemonList({ navigation }) {
-  const [todos, setTodos] = useState([]); // lista completa (nome + url)
-  const [pokemons, setPokemons] = useState([]); // itens da página atual, com tipos
-  const [pesquisa, setPesquisa] = useState("");
-  const [pagina, setPagina] = useState(0);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState("");
+    const [favoritos, setFavoritos] = useState([]);
 
-  const listaRef = useRef(null);
-  const cacheTipos = useRef({}); // guarda os tipos já buscados
-  const requisicaoAtual = useRef(0);
+    const [todos, setTodos] = useState([]);
+    const [pokemons, setPokemons] = useState([]);
+    const [pesquisa, setPesquisa] = useState('');
+    const [pagina, setPagina] = useState(0);
+    const [carregando, setCarregando] = useState(false);
+    const [pokemonEncontrado, setPokemonEncontrado] = useState(null);
+    const [erro, setErro] = useState('');
 
   const termo = pesquisa.trim().toLowerCase();
 
-  // Filtra a lista completa pelos caracteres digitados
-  const filtrados = useMemo(() => {
-    if (termo === "") {
-      return todos;
+    const totalPaginas = Math.ceil(todos.length / POR_PAGINA);
+
+    useFocusEffect(
+        useCallback(() => {
+            carregarFavoritos();
+        }, [])
+    );
+
+    useEffect(() => {
+        carregarLista();
+    }, []);
+
+    useEffect(() => {
+        if (todos.length > 0) {
+            carregarPagina();
+        }
+    }, [pagina, todos]);
+
+    async function carregarFavoritos() {
+        setFavoritos(await listarFavoritos());
+    }
+
+    async function alternar(item) {
+        setFavoritos(await alternarFavorito(item));
+    }
+
+    function ehFavorito(nome) {
+        return favoritos.some((item) => item.nome === nome);
+    }
+
+    async function carregarLista() {
+
+        try {
+            setCarregando(true);
+            setErro('');
+
+            const resposta = await ListarPokemons();
+
+            setTodos(resposta.data.results);
+
+        } catch (error) {
+            console.log('ERRO AO BUSCAR LISTA:', error);
+
+            setErro(error.message);
+
+        } finally {
+            setCarregando(false);
+        }
     }
 
     return todos.filter(item => corresponde(item, termo));
@@ -63,20 +107,34 @@ export default function PokemonList({ navigation }) {
   // Evita página vazia quando o filtro reduzir a quantidade de resultados
   const paginaAtual = Math.min(pagina, totalPaginas - 1);
 
-  // Busca a lista completa uma única vez
-  useEffect(() => {
-    carregarLista();
-  }, []);
+            const detalhados = await Promise.all(
+                itens.map(async (item) => {
 
   // Cada busca nova volta para a primeira página
   useEffect(() => {
     setPagina(0);
   }, [termo]);
 
-  // Sempre que a página ou o filtro mudar, carrega os 20 itens da página
-  useEffect(() => {
-    if (todos.length === 0) {
-      return;
+                    return {
+                        nome: item.name,
+                        id: pegarId(item.url),
+                        tipos: Array.isArray(dados?.tipo) ? dados.tipo : []
+                    };
+                })
+            );
+
+            setPokemons(detalhados);
+
+            listaRef.current?.scrollToOffset({ offset: 0, animated: false });
+
+        } catch (error) {
+            console.log('ERRO AO CARREGAR PÁGINA:', error);
+
+            setErro(error.message);
+
+        } finally {
+            setCarregando(false);
+        }
     }
 
     // Espera o usuário parar de digitar para não buscar a cada tecla
@@ -85,10 +143,11 @@ export default function PokemonList({ navigation }) {
     return () => clearTimeout(timer);
   }, [paginaAtual, todos, termo]);
 
-  async function carregarLista() {
-    try {
-      setCarregando(true);
-      setErro("");
+        if (termo === '') {
+            setPokemonEncontrado(null);
+            setErro('');
+            return;
+        }
 
       const resposta = await ListarPokemons();
 
@@ -96,9 +155,27 @@ export default function PokemonList({ navigation }) {
     } catch (error) {
       console.log("ERRO AO BUSCAR LISTA:", error);
 
-      setErro(error.message);
-    } finally {
-      setCarregando(false);
+            if (dados === null) {
+                setPokemonEncontrado(null);
+                setErro('Pokémon não encontrado');
+                return;
+            }
+
+            if (Array.isArray(dados)) {
+                setPokemonEncontrado(null);
+                setErro('Não foi possível pesquisar. Verifique sua conexão.');
+                return;
+            }
+
+            setPokemonEncontrado({
+                id: dados.id,
+                nome: dados.nome,
+                tipos: dados.tipo
+            });
+
+        } finally {
+            setCarregando(false);
+        }
     }
   }
 
@@ -162,11 +239,19 @@ export default function PokemonList({ navigation }) {
     }
   }
 
-  function abrirDetalhes(nome) {
-    navigation.navigate("PokemonDetails", {
-      pokemon: nome,
-    });
-  }
+    function renderizarCard(item) {
+        return (
+            <CardPokemon
+                item={item}
+                favorito={ehFavorito(item.nome)}
+                onAbrir={abrirDetalhes}
+                onAlternarFavorito={alternar}
+            />
+        );
+    }
+
+    return (
+        <View style={styles.container}>
 
   return (
     <View style={styles.container}>
@@ -190,44 +275,17 @@ export default function PokemonList({ navigation }) {
         </Text>
       )}
 
-      {filtrados.length === 0 && !carregando && termo !== "" && (
-        <Text style={styles.semResultado}>Nenhum Pokémon encontrado</Text>
-      )}
+            {pokemonEncontrado && renderizarCard(pokemonEncontrado)}
 
-      <FlatList
-        ref={listaRef}
-        data={pokemons}
-        keyExtractor={item => item.nome}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => abrirDetalhes(item.nome)}
-          >
-            <Text style={styles.nome}>
-              #{item.id} {item.nome}
-            </Text>
-
-            <View style={styles.tipos}>
-              {item.tipos.map(tipo => (
-                <TipoPokemon key={tipo} tipo={tipo} mostrarNome={false} />
-              ))}
-            </View>
-          </TouchableOpacity>
-        )}
-      />
-
-      {filtrados.length > POR_PAGINA && (
-        <View style={styles.paginacao}>
-          <TouchableOpacity
-            style={[
-              styles.botaoPagina,
-              (paginaAtual === 0 || carregando) && styles.botaoDesativado,
-            ]}
-            disabled={paginaAtual === 0 || carregando}
-            onPress={() => setPagina(paginaAtual - 1)}
-          >
-            <Text style={styles.textoPagina}>← Anterior</Text>
-          </TouchableOpacity>
+            {!pokemonEncontrado && (
+                <FlatList
+                    ref={listaRef}
+                    data={pokemons}
+                    extraData={favoritos}
+                    keyExtractor={(item) => item.nome}
+                    renderItem={({ item }) => renderizarCard(item)}
+                />
+            )}
 
           <Text style={styles.numeroPagina}>
             Página {paginaAtual + 1} de {totalPaginas}
@@ -292,35 +350,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  card: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 18,
-    borderRadius: 10,
-    marginBottom: 10,
-    elevation: 2,
-  },
-
-  nome: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "bold",
-    textTransform: "capitalize",
-  },
-
-  tipos: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  paginacao: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
+    paginacao: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 10
+    },
 
   botaoPagina: {
     backgroundColor: "#e53935",
