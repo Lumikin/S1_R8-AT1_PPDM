@@ -9,7 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 
-import { ListarDadosPokemon } from '../lib/pokeApi';
+import { ListarDadosPokemon } from '../services/pokeApi.js';
 
 import TipoPokemon from './TipoPokemon';
 

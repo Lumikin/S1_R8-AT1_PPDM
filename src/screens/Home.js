@@ -29,8 +29,7 @@ export default function Home({ navigation }) {
             </Text>
 
             <Text style={styles.descricao}>
-                Explore informações sobre diversos Pokémons
-                utilizando a PokéAPI.
+               Explore as informações dos pokemons 
             </Text>
 
             <TouchableOpacity

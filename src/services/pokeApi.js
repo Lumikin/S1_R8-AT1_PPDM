@@ -14,7 +14,10 @@ export async function ListarPokemons() {
 export async function ListarDadosPokemon(pokemon) {
   try {
     const api = await API_POKEMON.get(`/pokemon/${pokemon}`);
-
+    
+    /**
+     * Dados do pokemon que foi listado
+     */
     const dataPokemon = {
       id: api.data.id,
       nome: api.data.name,
