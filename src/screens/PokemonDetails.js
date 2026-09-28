@@ -131,40 +131,52 @@ export default function PokemonDetails({ route }) {
                     Informações
                 </Text>
 
-                <Text style={styles.informacao}>
-                    Altura: {pokemon.altura} m
-                </Text>
+                <View style={styles.medidas}>
 
-                <Text style={styles.informacao}>
-                    Peso: {pokemon.peso} kg
-                </Text>
+                    <View style={styles.caixaMedida}>
+                        <Text style={styles.rotuloMedida}>Altura</Text>
+                        <Text style={styles.valorMedida}>
+                            {pokemon.altura} m
+                        </Text>
+                    </View>
 
-                <Text style={styles.informacao}>
-                    Tipo:
+                    <View style={styles.caixaMedida}>
+                        <Text style={styles.rotuloMedida}>Peso</Text>
+                        <Text style={styles.valorMedida}>
+                            {pokemon.peso} kg
+                        </Text>
+                    </View>
+
+                </View>
+
+                <Text style={styles.subtitulo}>
+                    Tipo
                 </Text>
 
                 <View style={styles.tipos}>
                     {pokemon.tipo.map((tipo) => (
-                        <TipoPokemon
-                            key={tipo}
-                            tipo={tipo}
-                            tamanho={32}
-                        />
+                        <View key={tipo} style={styles.pilulaTipo}>
+                            <TipoPokemon
+                                tipo={tipo}
+                                tamanho={28}
+                            />
+                        </View>
                     ))}
                 </View>
 
-                <Text style={styles.informacao}>
-                    Habilidades:
+                <Text style={styles.subtitulo}>
+                    Habilidades
                 </Text>
 
-                {pokemon.habilidades.map((habilidade) => (
-                    <Text
-                        key={habilidade}
-                        style={styles.informacao}
-                    >
-                        {formatar(habilidade)}
-                    </Text>
-                ))}
+                <View style={styles.chips}>
+                    {pokemon.habilidades.map((habilidade) => (
+                        <View key={habilidade} style={styles.chipHabilidade}>
+                            <Text style={styles.textoHabilidade}>
+                                {formatar(habilidade)}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
 
             </View>
 
@@ -323,6 +335,67 @@ const styles = StyleSheet.create({
     informacao: {
         fontSize: 18,
         marginBottom: 8,
+        textTransform: 'capitalize'
+    },
+
+    medidas: {
+        flexDirection: 'row',
+        marginBottom: 20
+    },
+
+    caixaMedida: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: 'center',
+        marginHorizontal: 4
+    },
+
+    rotuloMedida: {
+        fontSize: 13,
+        color: '#777',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 4
+    },
+
+    valorMedida: {
+        fontSize: 22,
+        fontWeight: 'bold'
+    },
+
+    subtitulo: {
+        fontSize: 13,
+        color: '#777',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8
+    },
+
+    pilulaTipo: {
+        backgroundColor: '#f5f5f5',
+        borderRadius: 20,
+        paddingVertical: 4,
+        paddingLeft: 12,
+        paddingRight: 4,
+        marginRight: 8,
+        marginBottom: 8
+    },
+
+    chipHabilidade: {
+        backgroundColor: '#fdecea',
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        marginRight: 8,
+        marginBottom: 8
+    },
+
+    textoHabilidade: {
+        fontSize: 16,
+        color: '#c62828',
+        fontWeight: '600',
         textTransform: 'capitalize'
     },
 
