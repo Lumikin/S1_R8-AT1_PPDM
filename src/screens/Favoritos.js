@@ -20,11 +20,23 @@ export default function Favoritos({ navigation }) {
     );
 
     async function carregar() {
-        setFavoritos(await listarFavoritos());
+        const dados = await listarFavoritos();
+
+        const dadosValidos = dados.filter(
+            (item) => item && item.nome
+        );
+
+        setFavoritos(dadosValidos);
     }
 
     async function remover(item) {
-        setFavoritos(await alternarFavorito(item));
+        const novosFavoritos = await alternarFavorito(item);
+
+        const dadosValidos = novosFavoritos.filter(
+            (pokemon) => pokemon && pokemon.nome
+        );
+
+        setFavoritos(dadosValidos);
     }
 
     function abrirDetalhes(nome) {
@@ -33,7 +45,9 @@ export default function Favoritos({ navigation }) {
         });
     }
 
-    const ordenados = [...favoritos].sort((a, b) => a.id - b.id);
+    const ordenados = [...favoritos].sort(
+        (a, b) => Number(a.id) - Number(b.id)
+    );
 
     return (
         <View style={styles.container}>
@@ -51,8 +65,7 @@ export default function Favoritos({ navigation }) {
                 )}
                 ListEmptyComponent={
                     <Text style={styles.vazio}>
-                        Você ainda não favoritou nenhum Pokémon.{'\n'}
-                        Toque no ♡ de um Pokémon para adicioná-lo aqui.
+                        Você ainda não favoritou nenhum Pokémon.
                     </Text>
                 }
             />

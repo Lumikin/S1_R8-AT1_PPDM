@@ -64,7 +64,8 @@ export default function PokemonList({ navigation }) {
     }
 
     async function alternar(item) {
-        setFavoritos(await alternarFavorito(item));
+        const novosFavoritos = await alternarFavorito(item);
+        setFavoritos(novosFavoritos);
     }
 
     function ehFavorito(nome) {
@@ -108,14 +109,19 @@ export default function PokemonList({ navigation }) {
                     return {
                         nome: item.name,
                         id: pegarId(item.url),
-                        tipos: Array.isArray(dados?.tipo) ? dados.tipo : []
+                        tipos: Array.isArray(dados?.tipo)
+                            ? dados.tipo
+                            : []
                     };
                 })
             );
 
             setPokemons(detalhados);
 
-            listaRef.current?.scrollToOffset({ offset: 0, animated: false });
+            listaRef.current?.scrollToOffset({
+                offset: 0,
+                animated: false
+            });
 
         } catch (error) {
             console.log('ERRO AO CARREGAR PÁGINA:', error);
@@ -151,7 +157,9 @@ export default function PokemonList({ navigation }) {
 
             if (Array.isArray(dados)) {
                 setPokemonEncontrado(null);
-                setErro('Não foi possível pesquisar. Verifique sua conexão.');
+                setErro(
+                    'Não foi possível pesquisar. Verifique sua conexão.'
+                );
                 return;
             }
 
@@ -215,9 +223,12 @@ export default function PokemonList({ navigation }) {
                 </Text>
             )}
 
-            {pokemonEncontrado && renderizarCard(pokemonEncontrado)}
+            {pokemonEncontrado ? (
 
-            {!pokemonEncontrado && (
+                renderizarCard(pokemonEncontrado)
+
+            ) : (
+
                 <FlatList
                     ref={listaRef}
                     data={pokemons}
@@ -225,6 +236,7 @@ export default function PokemonList({ navigation }) {
                     keyExtractor={(item) => item.nome}
                     renderItem={({ item }) => renderizarCard(item)}
                 />
+
             )}
 
             {!pokemonEncontrado && (
@@ -233,7 +245,8 @@ export default function PokemonList({ navigation }) {
                     <TouchableOpacity
                         style={[
                             styles.botaoPagina,
-                            (pagina === 0 || carregando) && styles.botaoDesativado
+                            (pagina === 0 || carregando) &&
+                            styles.botaoDesativado
                         ]}
                         disabled={pagina === 0 || carregando}
                         onPress={() => setPagina(pagina - 1)}
@@ -244,15 +257,23 @@ export default function PokemonList({ navigation }) {
                     </TouchableOpacity>
 
                     <Text style={styles.numeroPagina}>
-                        Página {pagina + 1}{totalPaginas > 0 ? ` de ${totalPaginas}` : ''}
+                        Página {pagina + 1}
+                        {totalPaginas > 0
+                            ? ` de ${totalPaginas}`
+                            : ''}
                     </Text>
 
                     <TouchableOpacity
                         style={[
                             styles.botaoPagina,
-                            (pagina + 1 >= totalPaginas || carregando) && styles.botaoDesativado
+                            (pagina + 1 >= totalPaginas ||
+                                carregando) &&
+                            styles.botaoDesativado
                         ]}
-                        disabled={pagina + 1 >= totalPaginas || carregando}
+                        disabled={
+                            pagina + 1 >= totalPaginas ||
+                            carregando
+                        }
                         onPress={() => setPagina(pagina + 1)}
                     >
                         <Text style={styles.textoPagina}>
@@ -337,3 +358,4 @@ const styles = StyleSheet.create({
         fontSize: 16
     }
 });
+

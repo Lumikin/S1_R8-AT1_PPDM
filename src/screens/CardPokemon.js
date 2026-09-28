@@ -18,30 +18,36 @@ export default function CardPokemon({
                 #{item.id} {item.nome}
             </Text>
 
-            <View style={styles.tipos}>
-                {item.tipos.map((tipo) => (
-                    <TipoPokemon
-                        key={tipo}
-                        tipo={tipo}
-                        mostrarNome={false}
-                    />
-                ))}
-            </View>
+            <View style={styles.direita}>
 
-            <TouchableOpacity
-                style={styles.botaoFavorito}
-                onPress={() => onAlternarFavorito(item)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-                <Text
-                    style={[
-                        styles.coracao,
-                        favorito && styles.coracaoAtivo
-                    ]}
+                <TouchableOpacity
+                    style={styles.botaoFavorito}
+                    onPress={(evento) => {
+                        evento.stopPropagation();
+                        onAlternarFavorito(item);
+                    }}
                 >
-                    {favorito ? '♥' : '♡'}
-                </Text>
-            </TouchableOpacity>
+                    <Text
+                        style={[
+                            styles.estrela,
+                            favorito && styles.estrelaAtiva
+                        ]}
+                    >
+                        {favorito ? '★' : '☆'}
+                    </Text>
+                </TouchableOpacity>
+
+                <View style={styles.tipos}>
+                    {item.tipos.map((tipo) => (
+                        <TipoPokemon
+                            key={tipo}
+                            tipo={tipo}
+                            mostrarNome={false}
+                        />
+                    ))}
+                </View>
+
+            </View>
         </TouchableOpacity>
     );
 }
@@ -65,22 +71,28 @@ const styles = StyleSheet.create({
         textTransform: 'capitalize'
     },
 
-    tipos: {
+    direita: {
         flexDirection: 'row',
         alignItems: 'center'
     },
 
     botaoFavorito: {
-        marginLeft: 4,
+        marginRight: 8,
         paddingHorizontal: 4
     },
 
-    coracao: {
+    estrela: {
         fontSize: 28,
         color: '#aaa'
     },
 
-    coracaoAtivo: {
-        color: '#e53935'
+    estrelaAtiva: {
+        color: '#FFD700'
+    },
+
+    tipos: {
+        flexDirection: 'row',
+        alignItems: 'center'
     }
 });
+
