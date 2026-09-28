@@ -11,7 +11,7 @@ import {
 
 import { ListarDadosPokemon } from '../services/pokeApi.js';
 
-import { listarFavoritos, alternarFavorito } from '../lib/favoritosDb';
+import { listarFavoritos, alternarFavorito } from '../services/favoritosDb.js';
 
 import TipoPokemon from './TipoPokemon.js';
 
@@ -29,9 +29,15 @@ export default function PokemonDetails({ route }) {
     const [filtro, setFiltro] = useState('');
     const [favorito, setFavorito] = useState(false);
 
-    const identificador = route.params.pokemon;
+    // nome ou número do pokémon, vindo da tela anterior
+    const identificador = route.params?.pokemon;
 
     useEffect(() => {
+        if (!identificador) {
+            setErro('Nenhum Pokémon informado.');
+            return;
+        }
+
         carregarPokemon();
     }, []);
 

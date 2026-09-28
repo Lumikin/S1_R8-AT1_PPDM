@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
     listarFavoritos,
     alternarFavorito
-} from '../lib/favoritosDb';
+} from '../services/favoritosDb.js';
 
 import CardPokemon from './CardPokemon.js';
 

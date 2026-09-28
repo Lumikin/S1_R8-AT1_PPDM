@@ -11,6 +11,58 @@ export async function ListarPokemons() {
   return result;
 }
 
+// Todos os tipos existentes na PokéAPI, usados para montar o mapa de tipos
+const TIPOS = [
+  "normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison",
+  "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark",
+  "steel", "fairy",
+];
+
+// O endpoint /pokemon só devolve nome e url, então os tipos de cada pokemon
+// seriam 1 requisição por item da página. O endpoint /tipo já devolve todos os
+// pokemons de um tipo, então 18 requisições (uma por tipo) bastam para mapear
+// os tipos de todos os pokemons de uma vez.
+let mapaTiposPromise = null;
+
+export function ListarTiposPorPokemon() {
+  if (!mapaTiposPromise) {
+    mapaTiposPromise = (async () => {
+      const respostas = await Promise.all(
+        TIPOS.map((tipo) =>
+          API_POKEMON.get(`/type/${tipo}`).then(
+            (r) => [tipo, r.data.pokemon.map((p) => p.pokemon.name)],
+            (err) => {
+              console.log(`ERRO AO BUSCAR TIPO ${tipo}:`, err);
+              return [tipo, []];
+            },
+          ),
+        ),
+      );
+
+      const mapa = {};
+
+      for (const [tipo, nomes] of respostas) {
+        for (const nome of nomes) {
+          // A ordem de TIPOS define a ordem em que os tipos aparecem no card
+          if (!mapa[nome]) {
+            mapa[nome] = [];
+          }
+          mapa[nome].push(tipo);
+        }
+      }
+
+      return mapa;
+    })();
+
+    // Se falhar, permite tentar de novo em vez de ficar preso com o erro
+    mapaTiposPromise.catch(() => {
+      mapaTiposPromise = null;
+    });
+  }
+
+  return mapaTiposPromise;
+}
+
 export async function ListarDadosPokemon(pokemon) {
   try {
     const api = await API_POKEMON.get(`/pokemon/${pokemon}`);
