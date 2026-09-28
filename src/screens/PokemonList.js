@@ -83,7 +83,8 @@ export default function PokemonList({ navigation }) {
     }
 
     async function alternar(item) {
-        setFavoritos(await alternarFavorito(item));
+        const novosFavoritos = await alternarFavorito(item);
+        setFavoritos(novosFavoritos);
     }
 
     function ehFavorito(nome) {
@@ -106,6 +107,89 @@ export default function PokemonList({ navigation }) {
             console.log('ERRO AO BUSCAR LISTA:', error);
 
             setErro(error.message);
+
+        } finally {
+            setCarregando(false);
+        }
+    }
+
+    async function carregarPagina() {
+
+        try {
+            setCarregando(true);
+            setErro('');
+
+            const inicio = pagina * POR_PAGINA;
+            const itens = todos.slice(inicio, inicio + POR_PAGINA);
+
+            const detalhados = await Promise.all(
+                itens.map(async (item) => {
+
+                    const dados = await ListarDadosPokemon(item.name);
+
+                    return {
+                        nome: item.name,
+                        id: pegarId(item.url),
+                        tipos: Array.isArray(dados?.tipo)
+                            ? dados.tipo
+                            : []
+                    };
+                })
+            );
+
+            setPokemons(detalhados);
+
+            listaRef.current?.scrollToOffset({
+                offset: 0,
+                animated: false
+            });
+
+        } catch (error) {
+            console.log('ERRO AO CARREGAR PÁGINA:', error);
+
+            setErro(error.message);
+
+        } finally {
+            setCarregando(false);
+        }
+    }
+
+    async function pesquisar() {
+
+        const termo = pesquisa.trim().toLowerCase();
+
+        if (termo === '') {
+            setPokemonEncontrado(null);
+            setErro('');
+            return;
+        }
+
+        try {
+            setCarregando(true);
+            setErro('');
+
+            const dados = await ListarDadosPokemon(termo);
+
+            if (dados === null) {
+                setPokemonEncontrado(null);
+                setErro('Pokémon não encontrado');
+                return;
+            }
+
+            if (Array.isArray(dados)) {
+                setPokemonEncontrado(null);
+                setErro(
+                    'Não foi possível pesquisar. Verifique sua conexão.'
+                );
+                return;
+            }
+
+            setPokemonEncontrado({
+                id: dados.id,
+                nome: dados.nome,
+                tipos: dados.tipo
+            });
+
         } finally {
             setCarregando(false);
         }
@@ -163,10 +247,20 @@ export default function PokemonList({ navigation }) {
                 </Text>
             )}
 
-            {!carregando && termo !== '' && (
-                <Text style={styles.contagem}>
-                    {`${filtrados.length} resultado${filtrados.length === 1 ? '' : 's'} para "${pesquisa.trim()}"`}
-                </Text>
+            {pokemonEncontrado ? (
+
+                renderizarCard(pokemonEncontrado)
+
+            ) : (
+
+                <FlatList
+                    ref={listaRef}
+                    data={pokemons}
+                    extraData={favoritos}
+                    keyExtractor={(item) => item.nome}
+                    renderItem={({ item }) => renderizarCard(item)}
+                />
+
             )}
 
             {!carregando && termo !== '' && filtrados.length === 0 && (
@@ -195,7 +289,8 @@ export default function PokemonList({ navigation }) {
                     <TouchableOpacity
                         style={[
                             styles.botaoPagina,
-                            (paginaAtual === 0 || carregando) && styles.botaoDesativado
+                            (pagina === 0 || carregando) &&
+                            styles.botaoDesativado
                         ]}
                         disabled={paginaAtual === 0 || carregando}
                         onPress={() => setPagina(paginaAtual - 1)}
@@ -206,16 +301,24 @@ export default function PokemonList({ navigation }) {
                     </TouchableOpacity>
 
                     <Text style={styles.numeroPagina}>
-                        Página {paginaAtual + 1} de {totalPaginas}
+                        Página {pagina + 1}
+                        {totalPaginas > 0
+                            ? ` de ${totalPaginas}`
+                            : ''}
                     </Text>
 
                     <TouchableOpacity
                         style={[
                             styles.botaoPagina,
-                            (paginaAtual + 1 >= totalPaginas || carregando) && styles.botaoDesativado
+                            (pagina + 1 >= totalPaginas ||
+                                carregando) &&
+                            styles.botaoDesativado
                         ]}
-                        disabled={paginaAtual + 1 >= totalPaginas || carregando}
-                        onPress={() => setPagina(paginaAtual + 1)}
+                        disabled={
+                            pagina + 1 >= totalPaginas ||
+                            carregando
+                        }
+                        onPress={() => setPagina(pagina + 1)}
                     >
                         <Text style={styles.textoPagina}>
                             Próxima →
@@ -298,3 +401,4 @@ const styles = StyleSheet.create({
         fontSize: 16
     }
 });
+
