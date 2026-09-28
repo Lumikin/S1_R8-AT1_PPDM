@@ -20,7 +20,7 @@ export async function ListarDadosPokemon(pokemon) {
       nome: api.data.name,
       altura: api.data.height / 10, // Transformar em metros
       peso: api.data.weight / 10, // Transformar em KG
-      abilidades: api.data.abilities.map(a => a.ability.name),
+      habilidades: api.data.abilities.map(a => a.ability.name),
       movimentos: api.data.moves.map(m => m.move.name), // Mostra todos os movimentos em uma array
       imgMale: api.data.sprites.front_default,
       imgMaleS: api.data.sprites.front_shiny,
