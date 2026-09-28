@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -7,25 +7,32 @@ import {
     TouchableOpacity,
     FlatList
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
     ListarPokemons,
     ListarDadosPokemon
 } from '../lib/pokeApi';
 
-import TipoPokemon from './TipoPokemon';
+import {
+    listarFavoritos,
+    alternarFavorito
+} from '../lib/favoritosDb';
+
+import CardPokemon from './CardPokemon.js';
 
 const POR_PAGINA = 20;
 
-// Pega o número do pokémon a partir da url (".../pokemon/25/" -> "25")
 function pegarId(url) {
     return url.split('/').filter(Boolean).pop();
 }
 
 export default function PokemonList({ navigation }) {
 
-    const [todos, setTodos] = useState([]);           // lista completa (nome + url)
-    const [pokemons, setPokemons] = useState([]);     // itens da página atual, com tipos
+    const [favoritos, setFavoritos] = useState([]);
+
+    const [todos, setTodos] = useState([]);
+    const [pokemons, setPokemons] = useState([]);
     const [pesquisa, setPesquisa] = useState('');
     const [pagina, setPagina] = useState(0);
     const [carregando, setCarregando] = useState(false);
@@ -36,17 +43,33 @@ export default function PokemonList({ navigation }) {
 
     const totalPaginas = Math.ceil(todos.length / POR_PAGINA);
 
-    // Busca a lista completa uma única vez
+    useFocusEffect(
+        useCallback(() => {
+            carregarFavoritos();
+        }, [])
+    );
+
     useEffect(() => {
         carregarLista();
     }, []);
 
-    // Sempre que a lista chegar ou a página mudar, carrega os 20 da página
     useEffect(() => {
         if (todos.length > 0) {
             carregarPagina();
         }
     }, [pagina, todos]);
+
+    async function carregarFavoritos() {
+        setFavoritos(await listarFavoritos());
+    }
+
+    async function alternar(item) {
+        setFavoritos(await alternarFavorito(item));
+    }
+
+    function ehFavorito(nome) {
+        return favoritos.some((item) => item.nome === nome);
+    }
 
     async function carregarLista() {
 
@@ -77,7 +100,6 @@ export default function PokemonList({ navigation }) {
             const inicio = pagina * POR_PAGINA;
             const itens = todos.slice(inicio, inicio + POR_PAGINA);
 
-            // Busca os dados de cada pokémon da página em paralelo (para pegar os tipos)
             const detalhados = await Promise.all(
                 itens.map(async (item) => {
 
@@ -86,7 +108,6 @@ export default function PokemonList({ navigation }) {
                     return {
                         nome: item.name,
                         id: pegarId(item.url),
-                        // ListarDadosPokemon devolve [] quando dá erro
                         tipos: Array.isArray(dados?.tipo) ? dados.tipo : []
                     };
                 })
@@ -110,7 +131,6 @@ export default function PokemonList({ navigation }) {
 
         const termo = pesquisa.trim().toLowerCase();
 
-        // Pesquisa vazia: volta a mostrar a lista
         if (termo === '') {
             setPokemonEncontrado(null);
             setErro('');
@@ -124,20 +144,22 @@ export default function PokemonList({ navigation }) {
             const dados = await ListarDadosPokemon(termo);
 
             if (dados === null) {
-                // 404: não existe
                 setPokemonEncontrado(null);
                 setErro('Pokémon não encontrado');
                 return;
             }
 
             if (Array.isArray(dados)) {
-                // qualquer outro erro (internet, timeout...)
                 setPokemonEncontrado(null);
                 setErro('Não foi possível pesquisar. Verifique sua conexão.');
                 return;
             }
 
-            setPokemonEncontrado(dados);
+            setPokemonEncontrado({
+                id: dados.id,
+                nome: dados.nome,
+                tipos: dados.tipo
+            });
 
         } finally {
             setCarregando(false);
@@ -148,6 +170,17 @@ export default function PokemonList({ navigation }) {
         navigation.navigate('PokemonDetails', {
             pokemon: nome
         });
+    }
+
+    function renderizarCard(item) {
+        return (
+            <CardPokemon
+                item={item}
+                favorito={ehFavorito(item.nome)}
+                onAbrir={abrirDetalhes}
+                onAlternarFavorito={alternar}
+            />
+        );
     }
 
     return (
@@ -182,52 +215,15 @@ export default function PokemonList({ navigation }) {
                 </Text>
             )}
 
-            {pokemonEncontrado && (
-                <TouchableOpacity
-                    style={styles.card}
-                    onPress={() => abrirDetalhes(pokemonEncontrado.nome)}
-                >
-                    <Text style={styles.nome}>
-                        #{pokemonEncontrado.id} {pokemonEncontrado.nome}
-                    </Text>
-
-                    <View style={styles.tipos}>
-                        {pokemonEncontrado.tipo.map((tipo) => (
-                            <TipoPokemon
-                                key={tipo}
-                                tipo={tipo}
-                                mostrarNome={false}
-                            />
-                        ))}
-                    </View>
-                </TouchableOpacity>
-            )}
+            {pokemonEncontrado && renderizarCard(pokemonEncontrado)}
 
             {!pokemonEncontrado && (
                 <FlatList
                     ref={listaRef}
                     data={pokemons}
+                    extraData={favoritos}
                     keyExtractor={(item) => item.nome}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            style={styles.card}
-                            onPress={() => abrirDetalhes(item.nome)}
-                        >
-                            <Text style={styles.nome}>
-                                #{item.id} {item.nome}
-                            </Text>
-
-                            <View style={styles.tipos}>
-                                {item.tipos.map((tipo) => (
-                                    <TipoPokemon
-                                        key={tipo}
-                                        tipo={tipo}
-                                        mostrarNome={false}
-                                    />
-                                ))}
-                            </View>
-                        </TouchableOpacity>
-                    )}
+                    renderItem={({ item }) => renderizarCard(item)}
                 />
             )}
 
@@ -312,29 +308,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
         marginBottom: 10
-    },
-
-    card: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        padding: 18,
-        borderRadius: 10,
-        marginBottom: 10,
-        elevation: 2
-    },
-
-    nome: {
-        flex: 1,
-        fontSize: 18,
-        fontWeight: 'bold',
-        textTransform: 'capitalize'
-    },
-
-    tipos: {
-        flexDirection: 'row',
-        alignItems: 'center'
     },
 
     paginacao: {

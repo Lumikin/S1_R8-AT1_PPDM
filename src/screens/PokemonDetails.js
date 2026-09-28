@@ -11,14 +11,14 @@ import {
 
 import { ListarDadosPokemon } from '../lib/pokeApi';
 
-import TipoPokemon from './TipoPokemon';
+import { listarFavoritos, alternarFavorito } from '../lib/favoritosDb';
 
-// "special-attack" -> "special attack"
+import TipoPokemon from './TipoPokemon.js';
+
 function formatar(texto) {
     return texto.replace(/-/g, ' ');
 }
 
-// Quantos movimentos aparecem antes de o usuário tocar em "Ver todos"
 const MOVIMENTOS_VISIVEIS = 12;
 
 export default function PokemonDetails({ route }) {
@@ -27,8 +27,8 @@ export default function PokemonDetails({ route }) {
     const [erro, setErro] = useState('');
     const [mostrarTodos, setMostrarTodos] = useState(false);
     const [filtro, setFiltro] = useState('');
+    const [favorito, setFavorito] = useState(false);
 
-    // nome ou número do pokémon, vindo da tela anterior
     const identificador = route.params.pokemon;
 
     useEffect(() => {
@@ -47,13 +47,16 @@ export default function PokemonDetails({ route }) {
                 return;
             }
 
-            // ListarDadosPokemon devolve [] quando dá erro de rede/timeout
             if (Array.isArray(dados)) {
                 setErro('Não foi possível carregar os dados. Verifique sua conexão.');
                 return;
             }
 
             setPokemon(dados);
+
+            const favoritos = await listarFavoritos();
+
+            setFavorito(favoritos.some((item) => item.nome === dados.nome));
 
         } catch (error) {
             console.log('ERRO AO BUSCAR DETALHES:', error);
@@ -80,7 +83,6 @@ export default function PokemonDetails({ route }) {
         );
     }
 
-    // Só mostra as imagens que o pokémon realmente tem
     const imagens = [
         { titulo: 'Normal', uri: pokemon.imgMale },
         { titulo: 'Shiny', uri: pokemon.imgMaleS },
@@ -88,7 +90,6 @@ export default function PokemonDetails({ route }) {
         { titulo: 'Fêmea Shiny', uri: pokemon.imgFemaleS }
     ].filter((imagem) => imagem.uri);
 
-    // Movimentos em ordem alfabética, sem repetição
     const movimentosOrdenados = [...new Set(pokemon.movimentos)].sort();
 
     const movimentosFiltrados = movimentosOrdenados.filter((movimento) =>
@@ -98,6 +99,17 @@ export default function PokemonDetails({ route }) {
     const movimentosExibidos = mostrarTodos
         ? movimentosFiltrados
         : movimentosOrdenados.slice(0, MOVIMENTOS_VISIVEIS);
+
+    async function alternarFav() {
+
+        const novos = await alternarFavorito({
+            id: pokemon.id,
+            nome: pokemon.nome,
+            tipos: pokemon.tipo
+        });
+
+        setFavorito(novos.some((item) => item.nome === pokemon.nome));
+    }
 
     function alternarMovimentos() {
         setMostrarTodos(!mostrarTodos);
@@ -110,6 +122,23 @@ export default function PokemonDetails({ route }) {
             <Text style={styles.nome}>
                 #{pokemon.id} {pokemon.nome}
             </Text>
+
+            <TouchableOpacity
+                style={[
+                    styles.botaoFavorito,
+                    favorito && styles.botaoFavoritoAtivo
+                ]}
+                onPress={alternarFav}
+            >
+                <Text
+                    style={[
+                        styles.textoFavorito,
+                        favorito && styles.textoFavoritoAtivo
+                    ]}
+                >
+                    {favorito ? '♥ Favoritado' : '♡ Favoritar'}
+                </Text>
+            </TouchableOpacity>
 
             <View style={styles.imagens}>
                 {imagens.map((imagem) => (
@@ -293,7 +322,31 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'center',
         textTransform: 'capitalize',
+        marginBottom: 10
+    },
+
+    botaoFavorito: {
+        alignSelf: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#e53935',
         marginBottom: 20
+    },
+
+    botaoFavoritoAtivo: {
+        backgroundColor: '#e53935'
+    },
+
+    textoFavorito: {
+        color: '#e53935',
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+
+    textoFavoritoAtivo: {
+        color: '#fff'
     },
 
     imagens: {
